@@ -1,0 +1,91 @@
+* {
+ 
+  padding: 0;
+  margin: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+.mainroot {
+  height: 100%;
+  width: 100%;
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.middiv {
+  background-color: white;
+  height: 50%;
+  width: 60%;
+  display: flex;
+}
+
+.scoreboard {
+  background-color: white;
+  margin-top: 10px;
+  width: 60%;
+  height: 5%;
+  display: flex;
+}
+
+.leftist, .rightist {
+  display: flex;
+  width: 50%;
+  height: 100%;
+  flex-direction: column;
+
+}
+
+.left_div_up, .right_div_up {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 50%;
+  
+}
+
+.left_div_down, .right_div_down {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 50%;
+}
+
+.left_party_logo, .right_party_logo {
+  height: 100px;
+  width: 100px;
+  border-radius: 60px;
+  border: 2px solid black;
+}
+
+.left_vote, .right_vote {
+  background-color: rgb(6, 226, 6);
+  height: 35%;
+  width: 30%;
+  border: none;
+  border-radius: 40px;
+  
+}
+
+.left_vote:hover,  .right_vote:hover {
+  background-color: green;
+}
+
+.left_vote:active, .right_vote:active {
+  background-color: rgb(82, 241, 82);
+}
+
+.leftistscore, .rightistscore {
+  width: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
