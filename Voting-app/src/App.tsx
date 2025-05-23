@@ -2,7 +2,7 @@ import { useState } from 'react'
 import "./App.css"
 import leftlogo from "./assets/leftparty.jpg"
 import rightlogo from "./assets/rightlogo.png"
-import { BrowserProvider, Contract, JsonRpcSigner, ethers } from 'ethers'
+import { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 
 const Contractaddress = "0xe74c80570Bfbd5F96d9Ae991B5F3950751Ee8B15"
 const abi = [
@@ -84,7 +84,7 @@ function App() {
     }
   };
 
-    
+  console.log(signer);
 
   return (
     <>
