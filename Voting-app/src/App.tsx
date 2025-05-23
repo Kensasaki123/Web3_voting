@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import "./App.css"
 import leftlogo from "./assets/leftparty.jpg"
 import rightlogo from "./assets/rightlogo.png"
@@ -15,7 +15,6 @@ const abi = [
   "function didVote(address) public view returns (bool)"
 ];
 
-
 function App() {
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
@@ -23,91 +22,207 @@ function App() {
   const [account, setAccount] = useState<string>("");
   const [leftVotes, setLeftVotes] = useState<number>(0);
   const [rightVotes, setRightVotes] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasVoted, setHasVoted] = useState<boolean>(false);
+  const [showTooltip, setShowTooltip] = useState<boolean>(false);
   
   const connectWallet = async () => {
-  if (window.ethereum) {
-    try {
-      console.log("Wallet Detected");
+    if (window.ethereum) {
+      try {
+        setIsLoading(true);
+        console.log("Wallet Detected");
 
-      const web3provider = new BrowserProvider(window.ethereum);
-      const signer = await web3provider.getSigner();
-      const address = await signer.getAddress();
-      const contract = new Contract(Contractaddress, abi, signer);
+        const web3provider = new BrowserProvider(window.ethereum);
+        const signer = await web3provider.getSigner();
+        const address = await signer.getAddress();
+        const contract = new Contract(Contractaddress, abi, signer);
 
-      console.log("Connected account", account);
+        console.log("Connected account", address);
 
-      setProvider(web3provider);
-      setSigner(signer);
-      setAccount(address);
-      setContract(contract);
+        setProvider(web3provider);
+        setSigner(signer);
+        setAccount(address);
+        setContract(contract);
 
-      fetchVotes(contract);
-      
-    }
-    catch (err) {
-      console.log("Error connecting wallet:", err);
-      alert("Failed  to connect wallet.");
-    } 
-  }
-  else {
-      alert("Wallet not detected. Please install it.");
+        await fetchVotes(contract);
+        checkIfVoted(contract, address);
+        
+      } catch (err) {
+        console.log("Error connecting wallet:", err);
+        alert("Failed to connect wallet.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setShowTooltip(true);
+      setTimeout(() => setShowTooltip(false), 3000);
     }
   }
   
   const leftvote = async () => {
-    if (contract) {
-    const tx = await contract.party1vote();
-    await tx.wait();
-    alert("The vote has been conducted");
-    fetchVotes(contract)
+    if (!contract) return;
+    
+    try {
+      setIsLoading(true);
+      const tx = await contract.party1vote();
+      await tx.wait();
+      setHasVoted(true);
+      await fetchVotes(contract);
+    } catch (err) {
+      console.error("Voting error:", err);
+      alert("Voting failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
-   const rightvote = async () => {
-    if (contract) {
-    const tx = await contract.party2vote();
-    await tx.wait();
-    alert("The vote has been conducted");
-    fetchVotes(contract);
+  const rightvote = async () => {
+    if (!contract) return;
+    
+    try {
+      setIsLoading(true);
+      const tx = await contract.party2vote();
+      await tx.wait();
+      setHasVoted(true);
+      await fetchVotes(contract);
+    } catch (err) {
+      console.error("Voting error:", err);
+      alert("Voting failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
   const fetchVotes = async (c: Contract) => {
     try {
-      const left = await c.party1votereturn();
-      const right = await c.party2votereturn();
+      const [left, right] = await Promise.all([
+        c.party1votereturn(),
+        c.party2votereturn()
+      ]);
       setLeftVotes(Number(left));
-      setRightVotes(Number(right))
-    }
-    catch (err) {
-      console.error("Error fetching votes", err)
+      setRightVotes(Number(right));
+    } catch (err) {
+      console.error("Error fetching votes", err);
     }
   };
 
-  console.log(signer);
+  const checkIfVoted = async (c: Contract, addr: string) => {
+    try {
+      const voted = await c.didVote(addr);
+      setHasVoted(voted);
+    } catch (err) {
+      console.error("Error checking vote status", err);
+    }
+  };
+
+  const shortenAddress = (addr: string) => {
+    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  };
+
+  useEffect(() => {
+    if (window.ethereum?.isConnected()) {
+      connectWallet();
+    }
+  }, []);
 
   return (
-    <>
-      <div className='mainroot'>
-        <button className="connectwallet" onClick={connectWallet}>{provider ? `Connected as ${account}` :  "Connect"}</button>
-        <div className='middiv'>
-          <div className='leftist'>
-            <div className="left_div_up"><img src={leftlogo} alt="left_logo" className='left_party_logo' /></div>
-            <div className="left_div_down"> <button className="left_vote" onClick={leftvote}>Vote</button></div>
-          </div>
-          <div className='rightist'>
-            <div className="right_div_up"><img src={rightlogo} alt="right_logo" className='right_party_logo' /></div>
-            <div className="right_div_down"><button className="right_vote" onClick={rightvote}>Vote</button></div>
-          </div>
+    <div className="app-container">
+      <header className="app-header">
+        <h1 className="app-title">Decentralized Voting System</h1>
+        <button 
+          className={`connect-wallet ${provider ? 'connected' : ''}`} 
+          onClick={connectWallet}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <span className="loading-spinner"></span>
+          ) : provider ? (
+            <span className="wallet-address">
+              <span className="wallet-icon">🦊</span>
+              {shortenAddress(account)}
+            </span>
+          ) : (
+            "Connect Wallet"
+          )}
+        </button>
+      </header>
+
+      {showTooltip && (
+        <div className="wallet-tooltip">
+          Please install MetaMask or another Ethereum wallet
         </div>
-        <div  className='scoreboard'>
-          <div className="leftistscore">Left Votes: {leftVotes}</div>
-          <div className="rightistscore">Right Votes: {rightVotes}</div>
+      )}
+
+      <main className="voting-container">
+        <div className="party-card left-party">
+          <div className="party-logo-container">
+            <img src={leftlogo} alt="Left Party" className="party-logo" />
+          </div>
+          <div className="party-info">
+            <h2 className="party-name">Left Party</h2>
+            <div className="vote-count">{leftVotes} Votes</div>
+          </div>
+          <button 
+            className={`vote-button ${hasVoted ? 'disabled' : ''}`}
+            onClick={leftvote}
+            disabled={!provider || hasVoted || isLoading}
+          >
+            {hasVoted ? 'Already Voted' : 'Vote Now'}
+          </button>
         </div>
 
+        <div className="divider">
+          <span className="divider-text">VS</span>
+        </div>
+
+        <div className="party-card right-party">
+          <div className="party-logo-container">
+            <img src={rightlogo} alt="Right Party" className="party-logo" />
+          </div>
+          <div className="party-info">
+            <h2 className="party-name">Right Party</h2>
+            <div className="vote-count">{rightVotes} Votes</div>
+          </div>
+          <button 
+            className={`vote-button ${hasVoted ? 'disabled' : ''}`}
+            onClick={rightvote}
+            disabled={!provider || hasVoted || isLoading}
+          >
+            {hasVoted ? 'Already Voted' : 'Vote Now'}
+          </button>
+        </div>
+      </main>
+
+      <div className="results-container">
+        <div className="results-bar">
+          <div 
+            className="left-results" 
+            style={{ width: `${leftVotes + rightVotes === 0 ? 50 : (leftVotes / (leftVotes + rightVotes)) * 100}%` }}
+          >
+            <span className="results-percentage">
+              {leftVotes + rightVotes === 0 ? '0%' : `${Math.round((leftVotes / (leftVotes + rightVotes)) * 100)}%`}
+            </span>
+          </div>
+          <div 
+            className="right-results" 
+            style={{ width: `${leftVotes + rightVotes === 0 ? 50 : (rightVotes / (leftVotes + rightVotes)) * 100}%` }}
+          >
+            <span className="results-percentage">
+              {leftVotes + rightVotes === 0 ? '0%' : `${Math.round((rightVotes / (leftVotes + rightVotes)) * 100)}%`}
+            </span>
+          </div>
+        </div>
       </div>
 
-    </>
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner-large"></div>
+            <p>Processing transaction...</p>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
