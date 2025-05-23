@@ -124,6 +124,9 @@ function App() {
       connectWallet();
     }
   }, []);
+  console.log(signer);
+
+    
 
   return (
     <div className="app-container">
